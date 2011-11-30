@@ -29,7 +29,8 @@ public class FinalController extends DifferentialWheels {
   private static final int NUM_DS = 8;
   private static final int NUM_LS = 8;
   private static final int NUM_FS = 3;
-  private static final int PROX = 500;
+  private static final int PROX = 80;
+  private static final int PROXLED = 500;
   private static final double R = 0.0205; // m
   private static final double D = 0.052; // m
   private static final double SPEED_MULT = 0.00628;
@@ -189,6 +190,7 @@ public class FinalController extends DifferentialWheels {
     planner.setStart(start);
     planner.Astar();
     int[] path = planner.getDirections();
+    int[] wall = new int[4];
     
     while (step(TIME_STEP) != -1) {
         
@@ -214,11 +216,70 @@ public class FinalController extends DifferentialWheels {
       // Prox LEDs:
       proxLED();
       
+      // Detect walls:
+      wall = isWall(0);
+      
+      p(wall[0] + " " + wall[1] + " " + wall[2] + " " + wall[3]);
+      
       // Increment step:
       step += 1;
     }    
   }
   
+  /////////////////////////////////////////////////////
+  // Detect Wall:
+  /////////////////////////////////////////////////////
+  
+  private int[] isWall(int dir){ // dir: 0 = N, 1 = E, 2 = S, 3 = W 
+  
+    // Initialize:
+    int temp = 0;
+    int[] NESW = new int[4];
+    for(int i = 0; i < 4; i++)
+      NESW[i] = 0;
+    
+    if(ds[0].getValue() > PROX && ds[7].getValue() > PROX)
+      NESW[0] = 1;
+    if(ds[1].getValue() > PROX && ds[2].getValue() > PROX)
+      NESW[1] = 1;
+    if(ds[3].getValue() > PROX && ds[4].getValue() > PROX)
+      NESW[2] = 1;
+    if(ds[5].getValue() > PROX && ds[6].getValue() > PROX)
+      NESW[3] = 1;
+    
+    switch (dir)
+    {
+      case 0:
+        return NESW;
+      case 1:
+        temp = NESW[3];
+        NESW[3] = NESW[2];
+        NESW[2] = NESW[1];
+        NESW[1] = NESW[0];
+        NESW[0] = temp;
+        break;
+      case 2:
+        temp = NESW[3];
+        NESW[3] = NESW[1];
+        NESW[1] = temp;
+        temp = NESW[2];
+        NESW[2] = NESW[0];
+        NESW[0] = temp;
+        break;
+      case 3:
+        temp = NESW[0];
+        NESW[0] = NESW[1];
+        NESW[1] = NESW[2];
+        NESW[2] = NESW[3];
+        NESW[3] = temp;
+        break;
+      default:
+        p("invalid direction! should be [0-3]");
+        break;
+    }
+    
+    return NESW;
+  }
   /////////////////////////////////////////////////////
   // Get Location (Odometry):
   /////////////////////////////////////////////////////
@@ -421,7 +482,7 @@ public class FinalController extends DifferentialWheels {
   // Proximal LED:
   private void proxLED(){
     
-    if(ds[0].getValue() > PROX || ds[7].getValue() > PROX)
+    if(ds[0].getValue() > PROXLED || ds[7].getValue() > PROXLED)
       led[NUM_LEDS-2].set(1);
     else{ led[NUM_LEDS-2].set(0); }
     
